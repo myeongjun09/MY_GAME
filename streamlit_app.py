@@ -252,4 +252,3 @@ else:
     
     # 게임 로그 표시 (리스트를 \n으로 연결하여 한 줄씩 출력)
     st.text_area("게임 로그", value="\n".join(st.session_state.message), height=300, key="game_log")
-�
