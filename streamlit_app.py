@@ -32,7 +32,7 @@ if 'current_monster' not in st.session_state:
 def level_up():
     """
     플레이어의 경험치를 확인하고, 필요한 경험치에 도달하면 레벨업을 처리합니다.
-    레벨업 시 체력과 공격력이 증가하고, 경험치는 차감됩니다.
+    레벨업 시 체력와 공격력이 증가하고, 경험치는 차감됩니다.
     """
     player = st.session_state.player
     exp_needed = player['level'] * 50 # 다음 레벨업에 필요한 경험치
