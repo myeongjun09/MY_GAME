@@ -58,19 +58,19 @@ def spawn_monster(is_boss=False):
     player_level = st.session_state.player['level']
     if is_boss:
         # 보스 몬스터는 플레이어 레벨에 따라 강화되도록 수정
-        boss_hp = 150 + (player_level * 10) # 플레이어 레벨에 비례하여 HP 증가
-        boss_attack = 15 + (player_level * 2) # 플레이어 레벨에 비례하여 공격력 증가
-        boss_exp = 100 + (player_level * 10) # 플레이어 레벨에 비례하여 경험치 증가
+        boss_hp = 200 + (player_level * 15) # 플레이어 레벨에 비례하여 HP 증가
+        boss_attack = 20 + (player_level * 3) # 플레이어 레벨에 비례하여 공격력 증가
+        boss_exp = 150 + (player_level * 15) # 플레이어 레벨에 비례하여 경험치 증가
         return {'name': '최종 보스', 'hp': boss_hp, 'attack': boss_attack, 'exp': boss_exp}
     else:
         # 일반 몬스터는 플레이어 레벨 근처로 레벨이 결정됩니다.
-        # 몬스터 레벨은 플레이어 레벨의 -1 ~ +2 범위에서 결정, 최소 1레벨
-        monster_level = max(1, player_level + random.randint(-1, 2))
+        # 몬스터 레벨은 플레이어 레벨의 -3 ~ +3 범위에서 결정, 최소 1레벨
+        monster_level = max(1, player_level + random.randint(-3, 3))
         
         # 몬스터의 능력치도 몬스터 레벨에 비례하여 조정
-        hp = random.randint(20, 30) + (monster_level * 5)
-        attack = random.randint(5, 10) + (monster_level * 2)
-        exp = random.randint(15, 25) + (monster_level * 5)
+        hp = random.randint(25, 40) + (monster_level * 7) # 난이도 상향 조정
+        attack = random.randint(7, 12) + (monster_level * 3) # 난이도 상향 조정
+        exp = random.randint(20, 35) + (monster_level * 7) # 난이도 상향 조정
         
         return {'name': f'몬스터 Lv.{monster_level}', 'hp': hp, 'attack': attack, 'exp': exp}
 
@@ -198,7 +198,7 @@ else:
             st.progress(max(0, monster['hp']) / st.session_state.initial_monster_hp, text=f"몬스터 HP: {max(monster['hp'], 0)}") # 몬스터 HP 프로그레스 바에도 max(0, ...) 적용
             
             # 공격 버튼을 누르면 한 턴의 전투 진행
-            if st.button("공격 💥", key="attack_button"): # 고유 key 추가
+            if st.button("공격 �", key="attack_button"): # 고유 key 추가
                 execute_battle_turn()
 
         # 전투 중이 아닌 경우 (다음 방으로 이동 또는 이벤트 발생)
@@ -252,3 +252,4 @@ else:
     
     # 게임 로그 표시 (리스트를 \n으로 연결하여 한 줄씩 출력)
     st.text_area("게임 로그", value="\n".join(st.session_state.message), height=300, key="game_log")
+�
