@@ -20,7 +20,7 @@ if 'room' not in st.session_state:
 if 'game_over' not in st.session_state:
     st.session_state.game_over = False # 게임 오버 상태
 if 'message' not in st.session_state:
-    st.session_state.message = '새로운 모험을 시작합니다!' # 게임 로그 메시지
+    st.session_state.message = [] # 게임 로그 메시지를 리스트로 관리
 if 'in_battle' not in st.session_state:
     st.session_state.in_battle = False # 전투 중인지 여부
 if 'current_monster' not in st.session_state:
@@ -44,7 +44,7 @@ def level_up():
         player['hp'] = player['max_hp'] # 체력 회복
         player['attack'] += 5
         player['exp'] -= exp_needed # 초과 경험치는 다음 레벨로 이월되지 않음 (간단한 방식)
-        st.session_state.message += f"\n🎉레벨업! 현재 레벨: {player['level']} (최대 HP: {player['max_hp']}, 공격력: {player['attack']})"
+        st.session_state.message.append(f"🎉레벨업! 현재 레벨: {player['level']} (최대 HP: {player['max_hp']}, 공격력: {player['attack']})")
         exp_needed = player['level'] * 50 # 다음 레벨업에 필요한 경험치 갱신
 
 # =========================
@@ -75,11 +75,11 @@ def use_item(item_name):
     if item_name == '포션':
         heal_amount = random.randint(20, 40)
         player['hp'] = min(player['max_hp'], player['hp'] + heal_amount)
-        st.session_state.message += f"\n포션을 사용하여 HP를 {heal_amount} 회복했습니다. 현재 HP: {player['hp']}/{player['max_hp']}"
+        st.session_state.message.append(f"포션을 사용하여 HP를 {heal_amount} 회복했습니다. 현재 HP: {player['hp']}/{player['max_hp']}")
     elif item_name == '강화 물약':
         buff_amount = random.randint(3, 7)
         player['attack'] += buff_amount
-        st.session_state.message += f"\n강화 물약을 사용하여 공격력이 {buff_amount} 증가했습니다. 현재 공격력: {player['attack']}"
+        st.session_state.message.append(f"강화 물약을 사용하여 공격력이 {buff_amount} 증가했습니다. 현재 공격력: {player['attack']}")
     
     # 사용한 아이템을 인벤토리에서 제거합니다.
     st.session_state.player['inventory'].remove(item_name)
@@ -99,11 +99,11 @@ def execute_battle_turn():
     # 플레이어 턴
     player_damage = player['attack']
     monster['hp'] -= player_damage
-    st.session_state.message += f"⚔️ 플레이어가 {player_damage} 피해를 입혔다. {monster['name']} HP: {max(monster['hp'], 0)}\n"
+    st.session_state.message.append(f"⚔️ 플레이어가 {player_damage} 피해를 입혔다. {monster['name']} HP: {max(monster['hp'], 0)}")
 
     # 몬스터 사망 체크
     if monster['hp'] <= 0:
-        st.session_state.message += f"✅ {monster['name']} 처치!\n"
+        st.session_state.message.append(f"✅ {monster['name']} 처치!")
         player['exp'] += monster['exp']
         level_up() # 경험치 획득 후 레벨업 시도
         st.session_state.in_battle = False # 전투 종료
@@ -115,12 +115,12 @@ def execute_battle_turn():
     # 몬스터 턴 (몬스터가 살아있을 경우에만 공격)
     monster_damage = monster['attack']
     player['hp'] -= monster_damage
-    st.session_state.message += f"👹 {monster['name']}가 {monster_damage} 피해를 입혔다. 플레이어 HP: {max(player['hp'], 0)}\n"
+    st.session_state.message.append(f"👹 {monster['name']}가 {monster_damage} 피해를 입혔다. 플레이어 HP: {max(player['hp'], 0)}")
 
     # 플레이어 사망 체크
     if player['hp'] <= 0:
         st.session_state.game_over = True
-        st.session_state.message += "💀 플레이어가 사망했습니다. 게임 오버!"
+        st.session_state.message.append("💀 플레이어가 사망했습니다. 게임 오버!")
         st.session_state.in_battle = False # 전투 종료
         st.session_state.current_monster = None # 몬스터 정보 초기화
         st.rerun() # 게임 오버 후 UI 업데이트
@@ -140,6 +140,7 @@ if player['name'] == '':
     if st.button("캐릭터 생성 🚀", key="create_character_button"): # 고유 key 추가
         if name.strip() != '':
             st.session_state.player['name'] = name
+            st.session_state.message = ["새로운 모험을 시작합니다!"] # 캐릭터 생성 시 초기 메시지 설정
             st.rerun() # 이름 생성 후 UI를 업데이트하기 위해 다시 실행
 else:
     # 게임 상태 표시
@@ -151,7 +152,8 @@ else:
         st.metric("HP", f"{player['hp']}/{player['max_hp']}")
     with col3:
         st.metric("공격력", player['attack'])
-    st.progress(player['hp'] / player['max_hp'], text=f"HP: {player['hp']}/{player['max_hp']}")
+    # HP 프로그레스 바: player['hp']가 음수가 될 수 있으므로 max(0, player['hp'])로 조정
+    st.progress(max(0, player['hp']) / player['max_hp'], text=f"HP: {player['hp']}/{player['max_hp']}")
     st.progress(player['exp'] / (player['level'] * 50), text=f"EXP: {player['exp']} / {player['level'] * 50}")
     
     st.subheader(f"현재 방: {st.session_state.room} 🚪")
@@ -183,7 +185,7 @@ else:
             # 몬스터의 초기 HP를 저장하여 프로그레스 바 계산에 사용 (재실행 시 HP 감소로 인한 스케일 변화 방지)
             if 'initial_monster_hp' not in st.session_state:
                 st.session_state.initial_monster_hp = monster['hp']
-            st.progress(max(monster['hp'], 0) / st.session_state.initial_monster_hp, text=f"몬스터 HP: {max(monster['hp'], 0)}") 
+            st.progress(max(0, monster['hp']) / st.session_state.initial_monster_hp, text=f"몬스터 HP: {max(monster['hp'], 0)}") # 몬스터 HP 프로그레스 바에도 max(0, ...) 적용
             
             # 공격 버튼을 누르면 한 턴의 전투 진행
             if st.button("공격 💥", key="attack_button"): # 고유 key 추가
@@ -192,6 +194,8 @@ else:
         # 전투 중이 아닌 경우 (다음 방으로 이동 또는 이벤트 발생)
         else:
             if st.button("다음 방으로 이동 ➡️", key="next_room_button"): # 고유 key 추가
+                # 다음 방으로 이동할 때 이전 방의 로그를 초기화합니다.
+                st.session_state.message = []
                 # 몬스터 초기 HP 초기화 (새로운 몬스터를 위해)
                 if 'initial_monster_hp' in st.session_state:
                     del st.session_state.initial_monster_hp
@@ -201,7 +205,7 @@ else:
                     monster = spawn_monster(is_boss=True)
                     st.session_state.current_monster = monster
                     st.session_state.in_battle = True # 보스와 전투 시작
-                    st.session_state.message += f"🚨 방 {st.session_state.room}: 강력한 {monster['name']}가 나타났다!\n"
+                    st.session_state.message.append(f"🚨 방 {st.session_state.room}: 강력한 {monster['name']}가 나타났다!")
                     st.rerun() # 전투 시작 UI 업데이트
                 else:
                     # 일반 방 이벤트 처리
@@ -211,30 +215,31 @@ else:
                         monster = spawn_monster()
                         st.session_state.current_monster = monster
                         st.session_state.in_battle = True # 몬스터와 전투 시작
-                        st.session_state.message += f"⚔️ 방 {st.session_state.room}: {monster['name']}가 나타났다!\n"
+                        st.session_state.message.append(f"⚔️ 방 {st.session_state.room}: {monster['name']}가 나타났다!")
                         st.rerun() # 전투 시작 UI 업데이트
                     
                     elif event_type == 'item':
                         item = random.choice(['포션', '강화 물약'])
                         st.session_state.player['inventory'].append(item)
-                        st.session_state.message += f"✨ 방 {st.session_state.room}: 아이템 '{item}'을(를) 획득했습니다!"
+                        st.session_state.message.append(f"✨ 방 {st.session_state.room}: 아이템 '{item}'을(를) 획득했습니다!")
                         st.session_state.room += 1 # 아이템 획득 후 다음 방으로
                         st.rerun()
                     
                     elif event_type == 'trap':
                         damage = random.randint(5, 15)
                         st.session_state.player['hp'] -= damage
-                        st.session_state.message += f"⚠️ 방 {st.session_state.room}: 함정에 걸려 {damage} 피해를 입었다! 현재 HP: {player['hp']}/{player['max_hp']}"
+                        st.session_state.message.append(f"⚠️ 방 {st.session_state.room}: 함정에 걸려 {damage} 피해를 입었다! 현재 HP: {player['hp']}/{player['max_hp']}")
                         if st.session_state.player['hp'] <= 0:
                             st.session_state.game_over = True
-                            st.session_state.message += "💀 플레이어가 함정에 의해 사망했습니다. 게임 오버!"
+                            st.session_state.message.append("💀 플레이어가 함정에 의해 사망했습니다. 게임 오버!")
                         st.session_state.room += 1 # 함정 후 다음 방으로
                         st.rerun()
                     
                     else: # 'nothing' 이벤트
-                        st.session_state.message = f"🤔 방 {st.session_state.room}: 아무 일도 일어나지 않았다."
+                        st.session_state.message.append(f"🤔 방 {st.session_state.room}: 아무 일도 일어나지 않았다.")
                         st.session_state.room += 1 # 아무 일 없이 다음 방으로
                         st.rerun()
     
-    # 게임 로그 표시
-    st.text_area("게임 로그", value=st.session_state.message, height=300, key="game_log") # 고유 key 추가
+    # 게임 로그 표시 (리스트를 \n으로 연결하여 한 줄씩 출력)
+    st.text_area("게임 로그", value="\n".join(st.session_state.message), height=300, key="game_log")
+
