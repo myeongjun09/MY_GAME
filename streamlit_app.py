@@ -238,4 +238,3 @@ else:
     
     # 게임 로그 표시
     st.text_area("게임 로그", value=st.session_state.message, height=300, key="game_log") # 고유 key 추가
-
