@@ -198,7 +198,7 @@ else:
             st.progress(max(0, monster['hp']) / st.session_state.initial_monster_hp, text=f"몬스터 HP: {max(monster['hp'], 0)}") # 몬스터 HP 프로그레스 바에도 max(0, ...) 적용
             
             # 공격 버튼을 누르면 한 턴의 전투 진행
-            if st.button("공격 �", key="attack_button"): # 고유 key 추가
+            if st.button("공격 💥", key="attack_button"): # 고유 key 추가
                 execute_battle_turn()
 
         # 전투 중이 아닌 경우 (다음 방으로 이동 또는 이벤트 발생)
@@ -252,5 +252,3 @@ else:
     
     # 게임 로그 표시 (리스트를 \n으로 연결하여 한 줄씩 출력)
     st.text_area("게임 로그", value="\n".join(st.session_state.message), height=300, key="game_log")
-
-�
