@@ -115,8 +115,13 @@ for r in range(rows):
                     reveal(r, c)
                     check_victory()
 
-# 게임 상태 메시지
+# 게임 상태 메시지 + 재시작 버튼
 if st.session_state.game_over:
-    st.error("💥 게임 오버! 새로 시작하세요.")
+    st.error("💥 게임 오버!")
+    if st.button("🔄 다시 시작하기"):
+        new_game(level)
+
 elif st.session_state.victory:
     st.success("🎉 축하합니다! 모든 지뢰를 찾았습니다!")
+    if st.button("🔄 다시 시작하기"):
+        new_game(level)
