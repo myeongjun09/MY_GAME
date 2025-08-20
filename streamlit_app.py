@@ -1,5 +1,6 @@
 import streamlit as st
 import random
+import collections # 아이템 개수를 세기 위해 collections 모듈을 임포트합니다.
 
 # =========================
 # 초기화
@@ -19,6 +20,8 @@ if 'room' not in st.session_state:
     st.session_state.room = 1 # 현재 방 번호
 if 'game_over' not in st.session_state:
     st.session_state.game_over = False # 게임 오버 상태
+if 'game_clear' not in st.session_state:
+    st.session_state.game_clear = False # 게임 클리어 상태 추가
 if 'message' not in st.session_state:
     st.session_state.message = [] # 게임 로그 메시지를 리스트로 관리
 if 'in_battle' not in st.session_state:
@@ -61,7 +64,11 @@ def spawn_monster(is_boss=False):
         boss_hp = 200 + (player_level * 15) # 플레이어 레벨에 비례하여 HP 증가
         boss_attack = 20 + (player_level * 3) # 플레이어 레벨에 비례하여 공격력 증가
         boss_exp = 150 + (player_level * 15) # 플레이어 레벨에 비례하여 경험치 증가
-        return {'name': '최종 보스', 'hp': boss_hp, 'attack': boss_attack, 'exp': boss_exp}
+        # 최종 보스일 경우 이름을 다르게 설정
+        if st.session_state.room == 250:
+            return {'name': '최종 보스: 어둠의 군주', 'hp': 500 + (player_level * 25), 'attack': 40 + (player_level * 5), 'exp': 500}
+        else:
+            return {'name': '보스 몬스터', 'hp': boss_hp, 'attack': boss_attack, 'exp': boss_exp}
     else:
         # 일반 몬스터는 플레이어 레벨 근처로 레벨이 결정됩니다.
         # 몬스터 레벨은 플레이어 레벨의 -3 ~ +3 범위에서 결정, 최소 1레벨
@@ -113,12 +120,22 @@ def execute_battle_turn():
 
     # 몬스터 사망 체크
     if monster['hp'] <= 0:
-        st.session_state.message.append(f"✅ {monster['name']} 처치!")
-        player['exp'] += monster['exp']
-        level_up() # 경험치 획득 후 레벨업 시도
+        # 최종 보스 처치 시 게임 클리어
+        if monster['name'] == '최종 보스: 어둠의 군주':
+            st.session_state.message.append(f"🎉 {monster['name']}를 물리쳤습니다! 게임 클리어! 용사님의 위업을 칭송합니다!")
+            st.session_state.game_clear = True
+        else:
+            st.session_state.message.append(f"✅ {monster['name']} 처치!")
+            player['exp'] += monster['exp']
+            level_up() # 경험치 획득 후 레벨업 시도
+        
         st.session_state.in_battle = False # 전투 종료
         st.session_state.current_monster = None # 몬스터 정보 초기화
-        st.session_state.room += 1 # 다음 방으로 이동
+        
+        # 게임 클리어가 아니라면 다음 방으로 이동
+        if not st.session_state.game_clear:
+            st.session_state.room += 1 
+        
         st.rerun() # 전투 종료 후 UI 업데이트
         return
 
@@ -171,12 +188,13 @@ else:
     # 인벤토리 표시 및 아이템 사용
     if st.session_state.player['inventory']:
         st.subheader("인벤토리 🎒")
-        # set()을 사용하면 아이템이 여러 개여도 하나의 버튼만 표시되므로, 리스트 그대로 반복하며 key를 다르게 부여
-        for idx, item in enumerate(st.session_state.player['inventory']): 
-            # 각 아이템 사용 버튼에 고유한 key를 부여 (아이템 이름과 인덱스를 조합)
-            if st.button(f"{item} 사용", key=f"use_item_{item}_{idx}"): 
-                use_item(item)
-    
+        # collections.Counter를 사용하여 각 아이템의 개수를 세고, 종류별로 버튼을 생성합니다.
+        item_counts = collections.Counter(st.session_state.player['inventory'])
+        for item_name, count in item_counts.items():
+            # 각 아이템 종류에 고유한 key를 부여합니다.
+            if st.button(f"{item_name} (x{count}) 사용", key=f"use_item_{item_name}"): 
+                use_item(item_name) # use_item 함수 호출 시 아이템 이름만 전달
+
     # 게임 오버 상태
     if st.session_state.game_over:
         st.error("Game Over...")
@@ -185,7 +203,16 @@ else:
             st.session_state.clear() # 모든 세션 상태 지우기
             st.rerun() # 게임 재시작
 
-    # 게임 진행 중
+    # 게임 클리어 상태
+    elif st.session_state.game_clear:
+        st.balloons() # 축하 효과
+        st.success("🎉🎉🎉 게임 클리어! 당신은 어둠의 군주를 물리치고 세상을 구원했습니다! �🎉🎉")
+        st.write("모험의 끝에 도달했음을 축하합니다.")
+        if st.button("새로운 게임 시작 🌟", key="new_game_button"):
+            st.session_state.clear() # 모든 세션 상태 지우기
+            st.rerun() # 게임 재시작
+
+    # 게임 진행 중 (전투 중이거나 다음 방으로 이동할 수 있는 상태)
     else:
         # 전투 중인 경우
         if st.session_state.in_battle:
@@ -198,7 +225,7 @@ else:
             st.progress(max(0, monster['hp']) / st.session_state.initial_monster_hp, text=f"몬스터 HP: {max(monster['hp'], 0)}") # 몬스터 HP 프로그레스 바에도 max(0, ...) 적용
             
             # 공격 버튼을 누르면 한 턴의 전투 진행
-            if st.button("공격 �", key="attack_button"): # 고유 key 추가
+            if st.button("공격 💥", key="attack_button"): # 고유 key 추가
                 execute_battle_turn()
 
         # 전투 중이 아닌 경우 (다음 방으로 이동 또는 이벤트 발생)
@@ -210,9 +237,15 @@ else:
                 if 'initial_monster_hp' in st.session_state:
                     del st.session_state.initial_monster_hp
 
-                # 보스 방 체크 (50의 배수 방)
-                if st.session_state.room % 50 == 0:
-                    monster = spawn_monster(is_boss=True)
+                # 보스 방 체크: 최종 보스 (250층) 또는 일반 보스 (50층마다)
+                if st.session_state.room == 250:
+                    monster = spawn_monster(is_boss=True) # 최종 보스 생성
+                    st.session_state.current_monster = monster
+                    st.session_state.in_battle = True # 보스와 전투 시작
+                    st.session_state.message.append(f"🚨 방 {st.session_state.room}: 마침내 최종 보스인 {monster['name']}가 나타났다!")
+                    st.rerun() # 전투 시작 UI 업데이트
+                elif st.session_state.room % 50 == 0:
+                    monster = spawn_monster(is_boss=True) # 일반 보스 생성
                     st.session_state.current_monster = monster
                     st.session_state.in_battle = True # 보스와 전투 시작
                     st.session_state.message.append(f"🚨 방 {st.session_state.room}: 강력한 {monster['name']}가 나타났다!")
